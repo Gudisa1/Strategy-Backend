@@ -41,11 +41,9 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             if [ ! -d ~/strategybackend ]; then
-              git clone https://github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
-                --branch main \
-                --single-branch \
-                --quiet \
-                --depth 1
+              git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
+                --branch main --single-branch --quiet --depth 1
+
             fi
             cd ~/strategybackend &&
             git pull https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git main &&
