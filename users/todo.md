@@ -395,3 +395,72 @@ Got it — let’s **optimize and focus the Access Control API design** specific
 ---
 
 If you'd like, I can also provide **example Django REST Framework permission classes, serializers, or views** to implement this architecture — just say the word!
+
+
+<!-- 
+name: CI/CD Docker Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          registry: docker.io
+
+      - name: Build Django image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest -f Dockerfile .
+
+      - name: Push Django image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    steps:
+      - name: Install SSH
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+
+      - name: Deploy on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            if [ ! -d ~/strategybackend ]; then
+              git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
+                --branch main --single-branch --quiet --depth 1
+
+            fi
+            cd ~/strategybackend &&
+            git pull https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git main &&
+
+            # Write env file
+            cat > .env <<EOL
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=${{ secrets.DEBUG }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+            EOL
+
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --build
+          " -->
