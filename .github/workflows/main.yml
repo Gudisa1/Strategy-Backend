@@ -30,7 +30,7 @@ jobs:
     needs: build_and_push
     steps:
       - name: Install SSH
-        run: sudo apt-get update && sudo apt-get install -y openssh-client git
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
 
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -40,29 +40,27 @@ jobs:
       - name: Deploy on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            # Clone repo if it doesn't exist
             if [ ! -d ~/strategybackend ]; then
               git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
-                --branch main --single-branch --quiet --depth 1
+--branch main --single-branch --quiet --depth 1
+
             fi
+            cd ~/strategybackend &&
+            git pull https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git main &&
 
-            # Pull latest changes
-            git -C ~/strategybackend pull https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git main
+            # Write env file
+            cat > .env <<EOL
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=${{ secrets.DEBUG }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+            EOL
 
-            # Write .env file
-            cat > ~/strategybackend/.env <<EOL
-SECRET_KEY=${{ secrets.SECRET_KEY }}
-DEBUG=${{ secrets.DEBUG }}
-POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-DB_HOST=${{ secrets.DB_HOST }}
-DB_PORT=${{ secrets.DB_PORT }}
-ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
-EOL
-
-            # Restart Docker Compose
-            docker compose -f ~/strategybackend/docker-compose.prod.yml down
-            docker compose -f ~/strategybackend/docker-compose.prod.yml pull
-            docker compose -f ~/strategybackend/docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --build
           "
