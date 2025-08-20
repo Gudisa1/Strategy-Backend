@@ -17,9 +17,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          registry: docker.io
 
       - name: Build Django image
         run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest -f Dockerfile .
+
+      - name: Push Django image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -36,15 +40,18 @@ jobs:
       - name: Deploy on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Clone the repository if it doesn't exist
             if [ ! -d ~/strategybackend ]; then
               git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
                 --branch main --single-branch --quiet --depth 1
             fi
 
             cd ~/strategybackend
+
+            # Pull latest changes
             git pull https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git main
 
-            # Write env file safely
+            # Write .env file
             cat > .env <<EOL
 SECRET_KEY=${{ secrets.SECRET_KEY }}
 DEBUG=${{ secrets.DEBUG }}
@@ -56,6 +63,7 @@ DB_PORT=${{ secrets.DB_PORT }}
 ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
 EOL
 
+            # Restart Docker Compose services
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --build
