@@ -3,21 +3,24 @@ name: CI/CD Docker Deploy
 on:
   push:
     branches:
-      - main
+      - main  # Make sure your default branch is named "main"
 
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
     steps:
+      # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
+      # Build Django Docker image
       - name: Build Django image
         run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest -f Dockerfile .
 
@@ -25,19 +28,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_and_push
     steps:
+      # Install SSH client
       - name: Install SSH
         run: sudo apt-get update && sudo apt-get install -y openssh-client
 
+      # Set up SSH agent with private key
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
+      # Deploy to EC2
       - name: Deploy on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            # Clone repo if it does not exist
             if [ ! -d ~/strategybackend ]; then
-              git clone https://x-access-token:'"${{ secrets.PERSONAL_ACCESS_TOKEN }}"'@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend
+              git clone git@github.com:Gudisa1/Strategy-Backend.git ~/strategybackend
             fi
 
             cd ~/strategybackend
