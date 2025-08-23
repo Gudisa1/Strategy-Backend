@@ -33,6 +33,9 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -42,6 +45,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         "Role", on_delete=models.SET_NULL, null=True, blank=True, related_name="users"
     )
     departments = models.ManyToManyField("Department", related_name="users", blank=True)
+    permissions = models.ManyToManyField("Permission", related_name="users", blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
