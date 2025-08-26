@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",  # For handling CORS
+    "partners",
 ]
 
 MIDDLEWARE = [
