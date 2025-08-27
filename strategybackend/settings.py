@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",  # For handling CORS
     "partners",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

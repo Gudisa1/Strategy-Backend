@@ -7,4 +7,6 @@ router = DefaultRouter()
 router.register(r"partners", PartnerViewSet, basename="partners")
 
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("", include(router.urls)),
+]
