@@ -175,6 +175,8 @@ Partner ── (M:1) ── User (created_by / responsible)
   * [ ] `GET /api/documents/{doc_id}/` → Retrieve single doc metadata.
   * [ ] `DELETE /api/documents/{doc_id}/` → Delete document.
 
+  <!-- DONE -->
+
 * **Status History**
 
   * [ ] `POST /api/partners/{id}/status/` → Change status (auto log to history).

@@ -1,8 +1,9 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Partner, PartnerProfile
+from .models import Partner, PartnerDocument, PartnerProfile
 from rest_framework.decorators import action
 from .serializers import (
+    PartnerDocumentSerializer,
     PartnerSerializer,
     PartnerDetailSerializer,
     PartnerProfileSerializer,
@@ -92,3 +93,31 @@ class PartnerViewSet(viewsets.ModelViewSet):
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PartnerDocumentViewSet(viewsets.ModelViewSet):
+    """
+    Partner Document CRUD:
+    - POST → upload document
+    - GET → list documents
+    - GET /id → retrieve document
+    - DELETE → delete document
+    """
+
+    queryset = PartnerDocument.objects.all()
+    serializer_class = PartnerDocumentSerializer
+    permission_classes = [IsSysAdminOrDepartmentUser]
+
+    def get_queryset(self):
+        # Correctly return a queryset for the PartnerDocument model.
+        partner_id = self.kwargs.get("partner_pk")
+        if partner_id:
+            # Filters the queryset to only include documents for the specified partner.
+            return PartnerDocument.objects.filter(partner_id=partner_id)
+        # Fallback for listing all documents if not nested.
+        return PartnerDocument.objects.all()
+
+    def perform_create(self, serializer):
+        partner_id = self.kwargs.get("partner_pk")
+        partner = Partner.objects.get(id=partner_id)
+        serializer.save(uploaded_by=self.request.user, partner=partner)

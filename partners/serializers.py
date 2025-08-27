@@ -47,10 +47,31 @@ class PartnerProfileSerializer(serializers.ModelSerializer):
 # ----------------------
 class PartnerDocumentSerializer(serializers.ModelSerializer):
     uploaded_by = serializers.StringRelatedField(read_only=True)  # shows username
+    file = serializers.FileField(write_only=True, required=False)
+    file_url = serializers.URLField(required=False)
 
     class Meta:
         model = PartnerDocument
-        fields = ["id", "file_type", "file_url", "uploaded_by", "uploaded_at"]
+        fields = ["id", "file_type", "file", "file_url", "uploaded_by", "uploaded_at"]
+
+    def validate(self, attrs):
+        # Custom validation logic
+        if not attrs.get("file") and not attrs.get("file_url"):
+            raise serializers.ValidationError("You must provide a file or a file_url.")
+
+        return attrs
+
+    def create(self, validated_data):
+        file = validated_data.pop("file", None)
+
+        if file:
+            from django.core.files.storage import default_storage
+
+            path = default_storage.save(f"partner_documents/{file.name}", file)
+            validated_data["file_url"] = default_storage.url(path)
+
+        validated_data["uploaded_by"] = self.context["request"].user
+        return super().create(validated_data)
 
 
 class StatusHistorySerializer(serializers.ModelSerializer):
