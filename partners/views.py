@@ -6,7 +6,10 @@ from .models import (
     PartnerProfile,
     StatusHistory,
     RiskLevelHistory,
+    PartnerDepartment,
 )
+from users.models import Department
+
 from rest_framework.decorators import action
 from .serializers import (
     PartnerDocumentSerializer,
@@ -15,6 +18,8 @@ from .serializers import (
     PartnerProfileSerializer,
     StatusHistorySerializer,
     RiskLevelHistorySerializer,
+    PartnerDepartmentSerializer,
+    PartnerDepartmentDetailSerializer,
 )
 from rest_framework.response import Response
 
@@ -174,6 +179,52 @@ class PartnerViewSet(viewsets.ModelViewSet):
         history = partner.risk_history.all()  # Use correct related_name
         serializer = RiskLevelHistorySerializer(history, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="departments")
+    def assign_departments(self, request, pk=None):
+        partner = self.get_object()
+        dept_ids = request.data.get("departments", [])
+        if not isinstance(dept_ids, list):
+            return Response({"error": "departments must be a list"}, status=400)
+
+        assigned = []
+        for dept_id in dept_ids:
+            try:
+                department = Department.objects.get(id=dept_id)
+            except Department.DoesNotExist:
+                continue  # Skip invalid department
+
+            obj, created = PartnerDepartment.objects.get_or_create(
+                partner=partner, department=department
+            )
+            if created:
+                assigned.append(str(department.id))
+
+        return Response(
+            {"message": "Departments assigned successfully", "assigned": assigned},
+            status=201,
+        )
+
+    @action(detail=True, methods=["get"], url_path="list_departments")
+    def list_departments(self, request, pk=None):
+        partner = self.get_object()
+        assignments = partner.partnerdepartment_set.all()
+        serializer = PartnerDepartmentDetailSerializer(assignments, many=True)
+        return Response(serializer.data, status=200)
+
+    @action(detail=True, methods=["delete"], url_path="departments/(?P<dept_id>[^/.]+)")
+    def unassign_department(self, request, pk=None, dept_id=None):
+        partner = self.get_object()
+        try:
+            assignment = PartnerDepartment.objects.get(
+                partner=partner, department_id=dept_id
+            )
+            assignment.delete()
+            return Response(
+                {"message": "Department unassigned successfully"}, status=200
+            )
+        except PartnerDepartment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=404)
 
 
 class PartnerDocumentViewSet(viewsets.ModelViewSet):

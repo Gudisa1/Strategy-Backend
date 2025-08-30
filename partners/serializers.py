@@ -142,3 +142,23 @@ class PartnerDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class PartnerDepartmentSerializer(serializers.ModelSerializer):
+    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
+
+    class Meta:
+        model = PartnerDepartment
+        fields = ["id", "partner", "department", "assigned_at"]
+        read_only_fields = ["id", "partner", "assigned_at"]
+
+
+class PartnerDepartmentDetailSerializer(serializers.ModelSerializer):
+    department = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PartnerDepartment
+        fields = ["id", "department", "assigned_at"]
+
+    def get_department(self, obj):
+        return {"id": str(obj.department.id), "name": obj.department.name}
