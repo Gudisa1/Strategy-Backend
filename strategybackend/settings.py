@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 from datetime import timedelta  # import this library top of the settings.py file
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+# load_dotenv()  # Load environment variables from .env file
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,7 +18,13 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+# 
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '.localhost',  # Also allow subdomains
+]
 
 
 # Application definition
@@ -71,14 +77,21 @@ WSGI_APPLICATION = "strategybackend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite",
+#         "NAME": os.environ.get("DB_NAME"),
+#         "USER": os.environ.get("DB_USER"),
+#         "PASSWORD": os.environ.get("DB_PASSWORD"),
+#         "HOST": os.environ.get("DB_HOST"),
+#         "PORT": os.environ.get("DB_PORT", 5432),
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),
-        "PORT": os.environ.get("DB_PORT", 5432),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.environ.get("DB_NAME", BASE_DIR / "db.sqlite3"),
     }
 }
 
@@ -132,7 +145,12 @@ USE_TZ = True
 
 # Static & Media files
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"  # For Render collectstatic
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -144,3 +162,5 @@ AUTH_USER_MODEL = "users.User"
 
 # Optional: don't auto-append slash in URLs
 APPEND_SLASH = False
+
+DEBUG = True
