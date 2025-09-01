@@ -357,7 +357,7 @@ Got it — let’s **optimize and focus the Access Control API design** specific
 | Permission Code         | Description                      |
 | ----------------------- | -------------------------------- |
 | `partner_view`          | View partners                    |
-| `partner_add`           | Add partners                     |
+| `partner_add`           | Add partners                     |,
 | `partner_edit`          | Edit partners                    |
 | `partner_delete`        | Delete partners                  |
 | `mou_manage`            | Add/Edit/Delete MOUs             |

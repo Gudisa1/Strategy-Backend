@@ -17,9 +17,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          registry: docker.io
 
       - name: Build Django image
         run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest -f Dockerfile .
+
+      - name: Push Django image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/strategybackend-web:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -35,21 +39,33 @@ jobs:
 
       - name: Deploy on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Clone the repository if it doesn't exist
             if [ ! -d ~/strategybackend ]; then
-              git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend
-
+              git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/Gudisa1/Strategy-Backend.git ~/strategybackend \
+                --branch main --single-branch --quiet --depth 1
             fi
-            cd ~/strategybackend &&
-            git pull origin main &&
-            export SECRET_KEY='${{ secrets.SECRET_KEY }}' &&
-            export DEBUG='${{ secrets.DEBUG }}' &&
-            export POSTGRES_DB='${{ secrets.POSTGRES_DB }}' &&
-            export POSTGRES_USER='${{ secrets.POSTGRES_USER }}' &&
-            export POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' &&
-            export DB_HOST='${{ secrets.DB_HOST }}' &&
-            export DB_PORT='${{ secrets.DB_PORT }}' &&
-            export ALLOWED_HOSTS='${{ secrets.ALLOWED_HOSTS }}' &&
-            docker compose -f docker-compose.prod.yml pull &&
-            docker compose -f docker-compose.prod.yml up -d
-          "
+
+            cd ~/strategybackend
+
+            # Pull latest changes
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Write .env file
+            cat > .env <<EOL
+SECRET_KEY=${{ secrets.SECRET_KEY }}
+DEBUG=${{ secrets.DEBUG }}
+POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+DB_HOST=${{ secrets.DB_HOST }}
+DB_PORT=${{ secrets.DB_PORT }}
+ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+EOL
+
+            # Restart Docker Compose services
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --build
+EOF

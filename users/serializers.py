@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from .models import User, Department, Role, Permission
 
@@ -6,6 +7,9 @@ class UserSerializer(serializers.ModelSerializer):
     departments = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(), many=True, required=False
     )
+    permissions = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.all(), many=True, required=False
+    )
     password = serializers.CharField(write_only=True, required=False, min_length=8)
 
     class Meta:
@@ -13,12 +17,17 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "username",
+            "first_name",
+            "last_name",
+            "phone_number",
             "email",
             "password",
             "is_active",
             "is_staff",
             "is_sys_admin",
+            "role",
             "departments",
+            "permissions",
             "created_at",
             "updated_at",
         ]
@@ -26,18 +35,33 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         departments = validated_data.pop("departments", [])
+        permissions = validated_data.pop("permissions", [])
         password = validated_data.pop("password", None)
+        role = validated_data.pop("role", None)
 
         if not password:
             raise serializers.ValidationError({"password": "Password is required."})
+
         user = User.objects.create_user(password=password, **validated_data)
+        # user.departments.set(departments)
+
+        if role:
+            user.role = role
+            user.save()
+            permissions_from_role = role.permissions.all()
+            user.permissions.set(permissions_from_role)
+
+        if permissions:
+            user.permissions.add(*permissions)
 
         user.departments.set(departments)
         return user
 
     def update(self, instance, validated_data):
         departments = validated_data.pop("departments", None)
+        permissions = validated_data.pop("permissions", None)
         password = validated_data.pop("password", None)
+        role = validated_data.pop("role", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -45,11 +69,20 @@ class UserSerializer(serializers.ModelSerializer):
         if password:
             instance.set_password(password)
 
-        instance.save()
+        if role is not None:
+
+            instance.role = role
+            instance.save()
+            permissions_from_role = role.permissions.all()
+            instance.permissions.set(permissions_from_role)
 
         if departments is not None:
             instance.departments.set(departments)
 
+        if permissions is not None:
+            instance.permissions.set(permissions)
+
+        instance.save()
         return instance
 
 
