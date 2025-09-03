@@ -12,12 +12,16 @@ from .serializers import (
 )
 from .permissions import IsSysAdminOrSelf
 from users import permissions
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsSysAdminOrSelf]
+    authentication_classes = [JWTAuthentication]  # Add this line
 
     def get_queryset(self):
         user = self.request.user
@@ -40,6 +44,7 @@ class AdminCreateViewSet(viewsets.ModelViewSet):
     # permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["post"])
+    @csrf_exempt
     def create_admin(self, request):
         if not request.user.is_sys_admin:
             return Response(
