@@ -63,18 +63,18 @@ class AdminCreateViewSet(viewsets.ModelViewSet):
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
-    permission_classes = [IsAuthenticated, IsSysAdminOrSelf]
+    permission_classes = [IsSysAdminOrSelf]
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAuthenticated(), IsSysAdminOrSelf()]
+            return [IsSysAdminOrSelf()]
         return [permissions.IsSysAdminOrSelf()]
 
 
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = [IsAuthenticated, IsSysAdminOrSelf]
+    permission_classes = [IsSysAdminOrSelf]
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:

@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "corsheaders",  # For handling CORS
     "partners",
     "django_extensions",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
@@ -150,3 +151,10 @@ AUTH_USER_MODEL = "users.User"
 
 # Optional: don't auto-append slash in URLs
 APPEND_SLASH = False
+
+
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    },
+}
