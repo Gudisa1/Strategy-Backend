@@ -2,10 +2,16 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib import admin
 from django.urls import path, include
 
+from users.serializers import CustomTokenObtainPairSerializer
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    # path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+     path("api/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/", include("users.urls")),
-    path("api/", include("partners.urls")),
+    path("api/users/", include("users.urls")),
+    path("api/partners/", include("partners.urls")),
 ]

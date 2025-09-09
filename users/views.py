@@ -36,6 +36,15 @@ class UserViewSet(viewsets.ModelViewSet):
             {"detail": f"User '{user.username}' has been deleted successfully."},
             status=status.HTTP_200_OK,
         )
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """
+        Return the currently logged-in user info
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
 
 
 class AdminCreateViewSet(viewsets.ModelViewSet):
