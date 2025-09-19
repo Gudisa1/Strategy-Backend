@@ -1,17 +1,22 @@
+from psycopg import IntegrityError
 from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
+    MOU,
     Partner,
     PartnerDocument,
     PartnerProfile,
+    Project,
     StatusHistory,
     RiskLevelHistory,
     PartnerDepartment,
+    ProjectPartner,
 )
 from users.models import Department
 
 from rest_framework.decorators import action
 from .serializers import (
+    MOUSerializer,
     PartnerDocumentSerializer,
     PartnerSerializer,
     PartnerDetailSerializer,
@@ -20,6 +25,8 @@ from .serializers import (
     RiskLevelHistorySerializer,
     PartnerDepartmentSerializer,
     PartnerDepartmentDetailSerializer,
+    ProjectSerializer,
+    PartnershipProjectSerializer,
 )
 from rest_framework.response import Response
 
@@ -253,3 +260,102 @@ class PartnerDocumentViewSet(viewsets.ModelViewSet):
         partner_id = self.kwargs.get("partner_pk")
         partner = Partner.objects.get(id=partner_id)
         serializer.save(uploaded_by=self.request.user, partner=partner)
+
+
+# ----------------------
+# Project ViewSet
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    lookup_field = "id"
+    lookup_value_regex = "[0-9a-f-]{36}"  # UUID regex
+
+    permission_classes = [IsSysAdminOrDepartmentUser]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["status"]
+    search_fields = ["name", "description"]
+    ordering_fields = ["start_date", "end_date", "created_at", "updated_at"]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    @action(detail=True, methods=["get"], url_path="partners")
+    def list_partners(self, request, id=None):
+        project = self.get_object()
+        # Use the correct related_name from the model
+        partnerships = project.project_partners.all()
+        serializer = PartnershipProjectSerializer(partnerships, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProjectPartnerViewSet(viewsets.ModelViewSet):
+    queryset = ProjectPartner.objects.all()
+    serializer_class = PartnershipProjectSerializer
+    permission_classes = [IsSysAdminOrDepartmentUser]
+    lookup_field = "id"
+    lookup_value_regex = "[0-9a-f-]{36}"
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["project", "partner", "role", "status"]
+    search_fields = ["project__name", "partner__name", "role", "contribution"]
+    ordering_fields = ["start_date", "end_date", "created_at", "updated_at"]
+
+    def perform_create(self, serializer):
+        try:
+            serializer.save()
+        except IntegrityError:
+            return Response(
+                {
+                    "detail": "This partner is already assigned to the project with the same role."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @action(detail=False, methods=["get"], url_path="by-partner/(?P<partner_id>[^/.]+)")
+    def list_projects_for_partner(self, request, partner_id=None):
+        partnerships = self.queryset.filter(partner_id=partner_id)
+        serializer = self.get_serializer(partnerships, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="by-project/(?P<project_id>[^/.]+)/role/(?P<role>[^/.]+)",
+    )
+    def list_partners_by_role(self, request, project_id=None, role=None):
+        valid_roles = [choice[0] for choice in ProjectPartner.ROLE_CHOICES]
+        if role not in valid_roles:
+            return Response(
+                {"detail": "Invalid role."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        partnerships = self.queryset.filter(project_id=project_id, role=role)
+        serializer = self.get_serializer(partnerships, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MOUViewSet(viewsets.ModelViewSet):
+    queryset = MOU.objects.all()
+    serializer_class = MOUSerializer
+    permission_classes = [IsSysAdminOrDepartmentUser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["title", "partner__name", "project__name"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        project_id = self.request.query_params.get("project_id")
+        partner_id = self.request.query_params.get("partner_id")
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        if partner_id:
+            qs = qs.filter(partner_id=partner_id)
+        return qs

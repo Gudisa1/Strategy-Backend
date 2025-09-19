@@ -8,6 +8,9 @@ from .models import (
     StatusHistory,
     RiskLevelHistory,
     PartnerDepartment,
+    Project,
+    ProjectPartner,
+    MOU,
 )
 from users.models import Department
 
@@ -162,3 +165,64 @@ class PartnerDepartmentDetailSerializer(serializers.ModelSerializer):
 
     def get_department(self, obj):
         return {"id": str(obj.department.id), "name": obj.department.name}
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "name",
+            "description",
+            "start_date",
+            "end_date",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class PartnershipProjectSerializer(serializers.ModelSerializer):
+    # Nested project display (optional)
+    project_name = serializers.ReadOnlyField(source="project.name")
+    partner_name = serializers.ReadOnlyField(source="partner.name")
+
+    class Meta:
+        model = ProjectPartner
+        fields = [
+            "id",
+            "project",
+            "project_name",
+            "partner",
+            "partner_name",
+            "role",
+            "contribution",
+            "start_date",
+            "end_date",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class MOUSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MOU
+
+        fields = [
+            "id",
+            "project",  # FK: project ID
+            "partner",  # FK: partner ID
+            "title",
+            "description",
+            "start_date",
+            "end_date",
+            "status",
+            "document_url",  # read-only
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "document_url", "created_at", "updated_at"]

@@ -1,0 +1,33 @@
+# Use official Python base image
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Set work directory
+WORKDIR /app
+
+# Install only what’s needed (SQLite + netcat for entrypoint if needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sqlite3 netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Collect static files (don’t run migrate here, better at runtime)
+RUN python manage.py collectstatic --noinput || true
+
+# Expose app port
+EXPOSE 8000
+
+# Start Django with Gunicorn
+CMD ["gunicorn", "strategybackend.wsgi:application", "--bind", "0.0.0.0:8000"]

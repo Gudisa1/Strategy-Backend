@@ -145,3 +145,98 @@ class PartnerDepartment(models.Model):
 
     def __str__(self):
         return f"{self.partner.name} ↔ {self.department.name}"
+
+
+class Project(models.Model):
+    STATUS_CHOICES = [
+        ("planned", "Planned"),
+        ("ongoing", "Ongoing"),
+        ("completed", "Completed"),
+        ("on_hold", "On Hold"),
+        ("cancelled", "Cancelled"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planned")
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ProjectPartner(models.Model):
+    ROLE_CHOICES = [
+        ("lead", "Lead"),
+        ("support", "Support"),
+        ("consultant", "Consultant"),
+        ("other", "Other"),
+    ]
+
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("inactive", "Inactive"),
+        ("completed", "Completed"),
+        ("on_hold", "On Hold"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="project_partners"
+    )
+    partner = models.ForeignKey(
+        Partner, on_delete=models.CASCADE, related_name="project_partners"
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="other")
+    contribution = models.TextField(max_length=255, blank=True, null=True)
+
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("project", "partner", "role")
+
+    def __str__(self):
+        return f"{self.partner.name} in {self.project.name} as {self.role}"
+
+
+class MOU(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("expired", "Expired"),
+        ("terminated", "Terminated"),
+        ("pending", "Pending"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "Project", on_delete=models.CASCADE, related_name="mous"
+    )
+
+    partner = models.ForeignKey(
+        "Partner", on_delete=models.CASCADE, related_name="mous"
+    )
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    document_url = models.TextField(max_length=500, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-start_date"]
+
+    def __str__(self):
+        return f"MOU: {self.title} between {self.partner.name} and Project {self.project.name}"

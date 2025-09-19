@@ -234,3 +234,142 @@ Once Partner Management APIs are stable:
 * Proceed to **Partnership Projects API** (linking partners to specific projects).
 * Proceed to **MOUs API** (tracking agreements, validity, compliance).
 
+---
+---
+---
+
+# 📑 Project-Centric Design: Projects → Partnerships → MOUs
+
+---
+
+## 🔹 1. **Project Model (Foundation)**
+
+Every collaboration starts with a **Project**.
+
+* **Attributes**:
+
+  * `name`
+  * `description`
+  * `start_date`
+  * `end_date`
+  * `status` (planned, active, completed, on hold)
+
+This is the **root entity**. Everything else (partners, agreements) connects back to projects.
+
+---
+
+## 🔹 2. **Partnership Projects API**
+
+Defines how **partners are connected to projects**.
+
+* **Attributes**:
+
+  * `project` (FK → Project ✅ foundation)
+  * `partner` (FK → Partner)
+  * `role` (lead, funder, contributor, etc.)
+  * `contribution` (optional: financial, in-kind, hours, etc.)
+  * `start_date`
+  * `end_date`
+  * `status` (active, completed, withdrawn)
+
+* **Logic**:
+
+  * Many-to-many (a project can have many partners, a partner can join many projects).
+  * Timelines define involvement periods.
+  * Status tracks participation stage.
+
+* **Use Cases**:
+
+  * Get all partners of a project.
+  * See all projects a partner is involved in.
+  * Filter partners by role (e.g., "find all funders").
+
+---
+
+## 🔹 3. **MOUs API**
+
+Formal **legal agreements** with partners.
+
+* Although an MOU is mainly **between the org and a partner**, it may also **govern a specific project**.
+
+* **Attributes**:
+
+  * `partner` (FK → Partner ✅ always linked to a partner)
+  * `project` (optional FK → Project ✅ if MOU is tied to a specific project)
+  * `title` / `subject`
+  * `mou_file` (immutable, no edits/deletes)
+  * `status` (Draft, Active, Expired, Terminated)
+  * `start_date`
+  * `end_date`
+  * `created_at` (timestamp)
+
+* **Rules**:
+
+  * File immutability: once uploaded, cannot be edited/deleted.
+  * Versioning: new MOU = new record.
+  * Status automation: auto-expire when end\_date passes.
+  * Always linked to a **partner**, optionally linked to a **project**.
+
+* **Use Cases**:
+
+  * See all MOUs of a partner.
+  * Query active/expired agreements.
+  * Trace which project(s) an MOU governs.
+
+---
+
+## 🔗 Relationships Recap
+
+* **Project** (root)
+
+  * ↔ **Partners** → via **Partnership Projects API**
+  * ↔ **MOUs** → optional legal link (agreement covering this project)
+
+* **Partner**
+
+  * Can appear in multiple projects.
+  * Can have multiple MOUs (across time/projects).
+
+---
+
+
+
+🔹 What we’ll need to build now:
+
+Serializers
+
+ProjectSerializer (basic project CRUD).
+
+PartnershipProjectSerializer (linking partner + project + role).
+
+Views / Endpoints
+
+Projects:
+
+GET /projects/ → list projects.
+
+POST /projects/ → create a new project.
+
+GET /projects/{id}/ → retrieve single project.
+
+PUT/PATCH /projects/{id}/ → update project.
+
+DELETE /projects/{id}/ → delete project.
+
+PartnershipProjects:
+
+GET /partnerships/ → list all partner-project links.
+
+POST /partnerships/ → create a new link (add partner to project).
+
+GET /partnerships/{id}/ → retrieve details.
+
+PUT/PATCH /partnerships/{id}/ → update role, contribution, dates.
+
+DELETE /partnerships/{id}/ → remove link.
+
+Nested convenience endpoints (optional, but recommended)
+
+GET /projects/{id}/partners/ → list partners in a project.
+
+GET /partners/{id}/projects/ → list projects for a partner
