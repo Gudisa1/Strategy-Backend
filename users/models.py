@@ -85,13 +85,20 @@ class Permission(models.Model):
 
 
 class Role(models.Model):
+    LEVEL_CHOICES = [
+        ("employee", "Employee"),
+        ("manager", "Manager"),
+        ("ceo", "CEO"),
+    ]
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default="employee")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     permissions = models.ManyToManyField("Permission", related_name="roles", blank=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.level})"
 
 
 class Department(models.Model):
